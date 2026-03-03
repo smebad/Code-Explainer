@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Explainer & Debugger</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #58a6ff, #bc8cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #8b949e;
+      margin-bottom: 40px;
+      font-size: 1rem;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #8b949e;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      padding: 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #58a6ff;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-explain {
+      background: #1f6feb;
+      color: white;
+    }
+
+    .btn-debug {
+      background: #da3633;
+      color: white;
+    }
+
+    .btn-improve {
+      background: #238636;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-card {
+      display: none;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .result-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #58a6ff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .result-body {
+      color: #e6edf3;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+      color: #8b949e;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #30363d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>⚡ Code Explainer & Debugger</h1>
+    <p class="subtitle">Paste your code and let AI explain, debug, or improve it instantly</p>
+
+    <div class="card">
+      <label>Your Code</label>
+      <textarea id="codeInput" placeholder="Paste your code here..."></textarea>
+
+      <div class="actions">
+        <button class="btn-explain" onclick="analyze('explain')">🔍 Explain Code</button>
+        <button class="btn-debug" onclick="analyze('debug')">🐛 Find Bugs</button>
+        <button class="btn-improve" onclick="analyze('improve')">✨ Improve Code</button>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>AI is analyzing your code...</p>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <div class="result-header">
+        <span class="result-title" id="resultTitle">Result</span>
+      </div>
+      <div class="result-body" id="resultBody"></div>
+    </div>
+  </div>
+
+  <script>
+    async function analyze(action) {
+      const code = document.getElementById('codeInput').value.trim();
+
+      // Check if user pasted any code
+      if (!code) {
+        alert('Please paste some code first!');
+        return;
+      }
+
+      // Show loading, hide old results
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('resultCard').style.display = 'none';
+
+      // Disable all buttons while loading
+      document.querySelectorAll('button').forEach(b => b.disabled = true);
+
+      try {
+        // Send code to FastAPI backend
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, action })
+        });
+
+        const data = await response.json();
+
+        // Result
+        const titles = {
+          explain: '🔍 Code Explanation',
+          debug: '🐛 Bugs Found',
+          improve: '✨ Improvements'
+        };
+
+        document.getElementById('resultTitle').textContent = titles[action];
+        document.getElementById('resultBody').textContent = data.result;
+        document.getElementById('resultCard').style.display = 'block';
+
+      } catch (error) {
+        alert('Something went wrong! Check your terminal for errors.');
+      } finally {
+        // Hide loading, re-enable buttons
+        document.getElementById('loading').style.display = 'none';
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
+      }
+    }
+  </script>
+</body>
+
+</html>
